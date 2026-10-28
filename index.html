@@ -163,13 +163,20 @@
   .place-item.selected { background: #eef7ff; border-radius: 8px; }
   .place-msg { font-size: 13px; color: var(--sub); padding: 8px 2px; }
 
-  .rate-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 14px; border-bottom: 1px solid var(--line); min-height: 62px; }
-  .rate-row .r-label { font-size: 15px; font-weight: 500; }
-  .rate-row .r-label small { display: block; font-size: 12px; color: var(--sub); font-weight: 400; }
-  .stars { display: flex; }
-  .stars button { width: 44px; height: 50px; font-size: 32px; line-height: 1; color: #e0e0e0; transition: transform .1s; }
-  .stars button.on { color: var(--star); }
-  .stars button:active { transform: scale(1.2); }
+  /* ---------- 방사형 평가판 ---------- */
+  .radar-wrap { padding: 14px 10px 6px; border-bottom: 1px solid var(--line); }
+  .radar-head { display: flex; align-items: center; justify-content: space-between; padding: 0 6px 4px; }
+  .radar-head .field-label { margin: 0; }
+  .radar-reset { font-size: 13px; color: var(--sub); padding: 6px 8px; }
+  #radar { display: block; width: 100%; max-width: 380px; margin: 0 auto; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .radar-hint { text-align: center; font-size: 13px; color: var(--sub); padding: 2px 10px 8px; }
+  .r-lab { font-size: 26px; font-weight: 800; fill: #ff7a1a; letter-spacing: -1px; }
+  .r-val { font-size: 15px; font-weight: 700; fill: #262626; }
+  .r-sq { fill: none; stroke: #262626; stroke-width: 2.6; stroke-dasharray: 3 4.5; }
+  .r-sq.outer { stroke-width: 3.2; stroke-dasharray: none; }
+  .r-poly { fill: rgba(255, 122, 26, .22); stroke: #ff7a1a; stroke-width: 3; stroke-linejoin: round; }
+  .r-dot { fill: #fff; stroke: #ff7a1a; stroke-width: 3; }
+  .r-limb { fill: none; stroke: url(#limbGrad); stroke-width: 11; stroke-linecap: round; }
   .delete-link { display: block; margin: 22px auto 0; color: var(--red); font-size: 14px; font-weight: 500; padding: 10px 20px; }
 
   /* ---------- 촬영 화면 ---------- */
@@ -253,7 +260,7 @@
       <div><b id="statPending">0</b><span>평가 대기</span></div>
     </div>
   </div>
-  <div class="profile-name"><b>나의 점심 일기</b><p>맛 · 청결도 · 참신함 · 재방문 의사로 기록합니다</p></div>
+  <div class="profile-name"><b>나의 점심 일기</b><p>맛 · 청결 · 신박 · 또옴으로 기록합니다</p></div>
   <div class="grid-tabs"><div><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>전체 기록</div></div>
   <div class="grid" id="grid"></div>
 </main>
@@ -301,10 +308,14 @@
       <input class="text-input" id="restaurantName" placeholder="식당 이름 검색 또는 직접 입력" autocomplete="off">
       <div class="place-list" id="placeList"></div>
     </div>
-    <div class="rate-row"><div class="r-label">맛</div><div class="stars" data-cat="taste"></div></div>
-    <div class="rate-row"><div class="r-label">청결도<small>매장·식기·화장실</small></div><div class="stars" data-cat="clean"></div></div>
-    <div class="rate-row"><div class="r-label">참신함<small>메뉴·맛의 새로움</small></div><div class="stars" data-cat="novelty"></div></div>
-    <div class="rate-row"><div class="r-label">재방문 의사</div><div class="stars" data-cat="revisit"></div></div>
+    <div class="radar-wrap">
+      <div class="radar-head">
+        <div class="field-label">평가 <span class="req">*</span></div>
+        <button class="radar-reset" onclick="resetRadar()">다시 하기</button>
+      </div>
+      <svg id="radar" viewBox="0 0 360 372" aria-label="방사형 평가판"></svg>
+      <div class="radar-hint" id="radarHint">캐릭터의 팔·다리를 모서리 쪽으로 쭉 밀어 점수를 매기세요</div>
+    </div>
     <button class="delete-link" onclick="askDelete(currentId)">이 사진 삭제</button>
   </div>
 </section>
@@ -346,8 +357,8 @@ const APP_URL = 'https://yyebo5-glitch.github.io/todaylunch/';
 const CATS = [
   { key: 'taste',   label: '맛' },
   { key: 'clean',   label: '청결' },
-  { key: 'novelty', label: '참신' },
-  { key: 'revisit', label: '재방문' }
+  { key: 'novelty', label: '신박' },
+  { key: 'revisit', label: '또옴' }
 ];
 const HOME_COUNT = 9;     // 첫 화면에 보여줄 사진 수
 const MAX_WIDTH = 1280;   // 저장 사진 최대 가로
@@ -581,15 +592,152 @@ async function openPost(id) {
 function closePost() { $('postSheet').classList.remove('show'); document.body.style.overflow = ''; }
 
 /* ---------- 평가 화면 ---------- */
-CATS.forEach(c => {
-  const box = document.querySelector(`.stars[data-cat="${c.key}"]`);
-  box.innerHTML = [1, 2, 3, 4, 5].map(n => `<button data-n="${n}" aria-label="${n}점">★</button>`).join('');
-  box.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setStars(c.key, Number(b.dataset.n)); });
-});
-function setStars(cat, n) {
-  ratings[cat] = n;
-  document.querySelectorAll(`.stars[data-cat="${cat}"] button`).forEach(b => b.classList.toggle('on', Number(b.dataset.n) <= n));
+/* ===== 방사형 평가판: 모서리 쪽으로 밀면 캐릭터 팔·다리가 늘어남 =====
+   왼쪽 위 = 맛(왼팔), 오른쪽 위 = 청결(오른팔), 왼쪽 아래 = 신박(왼다리), 오른쪽 아래 = 또옴(오른다리) */
+const R = {
+  c: 180,                          // 가운데 좌표
+  rest: 40,                        // 점수 없을 때 손발 위치
+  lv: [0, 52, 74, 96, 118, 140],   // 1~5점 네모의 반 크기
+  dir: { taste: [-1, -1], clean: [1, -1], novelty: [-1, 1], revisit: [1, 1] },
+  joint: { taste: [161.6, 180.4], clean: [198.4, 180.4], novelty: [169.7, 214.9], revisit: [190.3, 214.9] }  // 어깨·엉덩이 (캐릭터 1.15배 기준)
+};
+let live = null;   // 지금 손가락으로 끌고 있는 항목 { cat, h, level }
+
+function buildRadar() {
+  const c = R.c;
+  const sq = R.lv.slice(1).map((h, i) =>
+    `<rect class="r-sq ${i === 4 ? 'outer' : ''}" x="${c - h}" y="${c - h}" width="${h * 2}" height="${h * 2}"/>`).join('');
+  $('radar').innerHTML = `
+    <defs>
+      <pattern id="dots" width="18" height="18" patternUnits="userSpaceOnUse"><circle cx="9" cy="9" r="1.3" fill="#d9d9d9"/></pattern>
+      <linearGradient id="limbGrad" gradientUnits="userSpaceOnUse" x1="60" y1="120" x2="300" y2="260">
+        <stop offset="0" stop-color="#ffb347"/><stop offset=".55" stop-color="#f6c15b"/><stop offset="1" stop-color="#9fcf62"/>
+      </linearGradient>
+      <linearGradient id="bodyGrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#ffbe55"/><stop offset=".6" stop-color="#f3c862"/><stop offset="1" stop-color="#a6d06a"/>
+      </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="360" height="372" fill="url(#dots)"/>
+    ${sq}
+    <polygon class="r-poly" id="rPoly"/>
+    <g id="rLimbs">
+      <path class="r-limb" id="limb-novelty"/><path class="r-limb" id="limb-revisit"/>
+      <path class="r-limb" id="limb-taste"/><path class="r-limb" id="limb-clean"/>
+    </g>
+    <g id="rEnds"></g>
+    <g id="rChar" transform="translate(180 185) scale(1.15) translate(-180 -185)">
+      <path d="M170 146 l-5 -11 l10 6z M190 146 l5 -11 l-10 6z" fill="#e39a4d"/>
+      <ellipse cx="180" cy="194" rx="24" ry="25" fill="url(#bodyGrad)"/>
+      <ellipse cx="180" cy="198" rx="16" ry="17" fill="#fff2c2"/>
+      <ellipse cx="157" cy="160" rx="9" ry="5" fill="#f9b54f" transform="rotate(-20 157 160)"/>
+      <ellipse cx="203" cy="160" rx="9" ry="5" fill="#c9cf5e" transform="rotate(20 203 160)"/>
+      <circle cx="180" cy="163" r="21" fill="url(#bodyGrad)"/>
+      <circle cx="172" cy="162" r="3.6" fill="#4a2e1c"/><circle cx="188" cy="162" r="3.6" fill="#4a2e1c"/>
+      <circle cx="173.2" cy="160.6" r="1.2" fill="#fff"/><circle cx="189.2" cy="160.6" r="1.2" fill="#fff"/>
+      <ellipse cx="166" cy="169" rx="3.5" ry="2" fill="#ff9e7a" opacity=".6"/><ellipse cx="194" cy="169" rx="3.5" ry="2" fill="#ff9e7a" opacity=".6"/>
+      <path id="rMouth" d="M175 170 Q180 173 185 170" fill="none" stroke="#4a2e1c" stroke-width="1.8" stroke-linecap="round"/>
+    </g>
+    <g id="rLabels"></g>`;
+
+  const svg = $('radar');
+  svg.addEventListener('pointerdown', onRadarDown);
+  svg.addEventListener('pointermove', onRadarMove);
+  svg.addEventListener('pointerup', onRadarUp);
+  svg.addEventListener('pointercancel', onRadarUp);
 }
+
+function hOf(cat) {
+  if (live && live.cat === cat) return live.h;
+  const v = ratings[cat] || 0;
+  return v ? R.lv[v] : R.rest;
+}
+function cornerPt(cat, h) { const [sx, sy] = R.dir[cat]; return [R.c + sx * h, R.c + sy * h]; }
+function levelOf(h) { return Math.max(1, Math.min(5, Math.round((h - R.lv[1]) / (R.lv[2] - R.lv[1])) + 1)); }
+
+function limbPath(from, to, bend) {
+  const mx = (from[0] + to[0]) / 2, my = (from[1] + to[1]) / 2;
+  const dx = to[0] - from[0], dy = to[1] - from[1], len = Math.hypot(dx, dy) || 1;
+  return `M${from} Q${mx - dy / len * bend},${my + dx / len * bend} ${to}`;
+}
+
+function drawRadar() {
+  const pts = {};
+  CATS.forEach(c => { pts[c.key] = cornerPt(c.key, hOf(c.key)); });
+
+  // 채워지는 다각형 (맛 → 청결 → 또옴 → 신박)
+  $('rPoly').setAttribute('points', [pts.taste, pts.clean, pts.revisit, pts.novelty].map(p => p.join(',')).join(' '));
+  $('rPoly').style.display = (live || CATS.some(c => ratings[c.key])) ? '' : 'none';   // 첫 스와이프 전에는 숨김
+
+  // 팔·다리: 길어질수록 살짝 휘게
+  let ends = '';
+  CATS.forEach(c => {
+    const k = c.key, j = R.joint[k], p = pts[k];
+    const stretch = (hOf(k) - R.rest) / (R.lv[5] - R.rest);
+    const bend = (k === 'taste' || k === 'revisit' ? 1 : -1) * (6 + stretch * 10);
+    $('limb-' + k).setAttribute('d', limbPath(j, p, bend));
+    const isLeg = k === 'novelty' || k === 'revisit';
+    ends += isLeg
+      ? `<ellipse cx="${p[0]}" cy="${p[1]}" rx="9" ry="7" fill="url(#limbGrad)"/><ellipse cx="${p[0]}" cy="${p[1] + 1}" rx="5" ry="3.5" fill="#fff2c2"/>`
+      : `<circle cx="${p[0]}" cy="${p[1]}" r="8" fill="url(#limbGrad)"/><circle cx="${p[0] - 2}" cy="${p[1] - 2}" r="2.6" fill="#fff2c2" opacity=".9"/>`;
+    if (ratings[k] || (live && live.cat === k)) ends += `<circle class="r-dot" cx="${p[0]}" cy="${p[1]}" r="4"/>`;
+  });
+  $('rEnds').innerHTML = ends;
+
+  // 점수가 높을수록 입이 더 크게 웃음
+  const vals = CATS.map(c => (live && live.cat === c.key) ? live.level : (ratings[c.key] || 0));
+  const avg = vals.reduce((a, b) => a + b, 0) / 4;
+  const smile = 170 + 1 + avg * 1.6;
+  $('rMouth').setAttribute('d', `M174 170 Q180 ${smile.toFixed(1)} 186 170`);
+
+  // 모서리 글자 + 점수
+  const lab = [
+    ['taste', 34, 28, 'start'], ['clean', 326, 28, 'end'],
+    ['novelty', 34, 364, 'start'], ['revisit', 326, 364, 'end']
+  ];
+  $('rLabels').innerHTML = lab.map(([k, x, y, anchor]) => {
+    const c = CATS.find(cc => cc.key === k);
+    const v = (live && live.cat === k) ? live.level : ratings[k];
+    return `<text x="${x}" y="${y}" text-anchor="${anchor}"><tspan class="r-lab">${c.label}</tspan>${v ? `<tspan class="r-val" dx="6">${v}점</tspan>` : ''}</text>`;
+  }).join('');
+}
+
+function svgPoint(e) {
+  const svg = $('radar'), pt = new DOMPoint(e.clientX, e.clientY);
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+function catAt(dx, dy) { return dy < 0 ? (dx < 0 ? 'taste' : 'clean') : (dx < 0 ? 'novelty' : 'revisit'); }
+
+function onRadarDown(e) {
+  const p = svgPoint(e), dx = p.x - R.c, dy = p.y - R.c;
+  if (Math.hypot(dx, dy) < 10) return;
+  live = { cat: catAt(dx, dy), h: hOf(catAt(dx, dy)), level: 0 };
+  $('radar').setPointerCapture(e.pointerId);
+  onRadarMove(e);
+}
+function onRadarMove(e) {
+  if (!live) return;
+  const p = svgPoint(e), [sx, sy] = R.dir[live.cat];
+  const h = ((p.x - R.c) * sx + (p.y - R.c) * sy) / 2;      // 대각선 방향으로 얼마나 밀었는지
+  live.h = Math.max(R.rest, Math.min(R.lv[5] + 6, h));
+  const lvl = levelOf(live.h);
+  if (lvl !== live.level && navigator.vibrate) navigator.vibrate(8);
+  live.level = lvl;
+  drawRadar();
+}
+function onRadarUp() {
+  if (!live) return;
+  ratings[live.cat] = live.level;   // 손 떼면 가장 가까운 점수 칸에 딱 맞춤
+  live = null;
+  drawRadar();
+  const left = CATS.filter(c => !ratings[c.key]).map(c => c.label);
+  $('radarHint').textContent = left.length ? `남은 항목: ${left.join(', ')}` : '모두 채웠어요! 위의 저장을 눌러주세요';
+}
+function resetRadar() {
+  ratings = {};
+  drawRadar();
+  $('radarHint').textContent = '캐릭터의 팔·다리를 모서리 쪽으로 쭉 밀어 점수를 매기세요';
+}
+buildRadar();
 
 async function openPendingRating() {
   const pending = (await getAll()).filter(r => r.status === 'pending').sort((a, b) => b.timestamp - a.timestamp);
@@ -605,8 +753,10 @@ async function openRate(id) {
   $('ratePhoto').src = r.thumb || r.image;
   $('memoText').value = r.memo || '';
   $('restaurantName').value = r.restaurantName || '';
-  ratings = {};
-  CATS.forEach(c => setStars(c.key, r.ratings?.[c.key] || 0));
+  ratings = { ...(r.ratings || {}) };
+  live = null;
+  drawRadar();
+  $('radarHint').textContent = r.ratings ? '모서리를 다시 밀어 점수를 고칠 수 있어요' : '캐릭터의 팔·다리를 모서리 쪽으로 쭉 밀어 점수를 매기세요';
   $('rateSheet').classList.add('show');
   document.body.style.overflow = 'hidden';
   $('placeList').innerHTML = '';
@@ -620,7 +770,7 @@ async function saveRating() {
   const name = $('restaurantName').value.trim();
   if (!name) { toast('식당 이름을 입력해 주세요'); $('restaurantName').focus(); return; }
   const missing = CATS.filter(c => !ratings[c.key]);
-  if (missing.length) { toast(`${missing.map(c => c.label).join(', ')} 점수를 선택해 주세요`); return; }
+  if (missing.length) { toast(`${missing.map(c => c.label).join(', ')} 점수를 채워 주세요`); return; }
 
   const r = await getOne(currentId);
   if (!r) return;
