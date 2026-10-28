@@ -13,7 +13,7 @@
   - 구글 지도 API 금지 (카드 등록 필수).
   - Firebase Cloud Storage 금지 (Blaze 요금제 필수). Firestore Spark 무료는 가능.
 - **깃허브에 push 하기 전에 반드시 오빠에게 "올려도 될까요?" 확인받기.**
-- 코드를 고쳐서 올릴 때마다 `sw.js`의 `CACHE` 버전 숫자를 올린다 (현재 oneuri-v6, 다음은 v7 ...). 안 올리면 폰에 옛 버전이 남는다.
+- 코드를 고쳐서 올릴 때마다 `sw.js`의 `CACHE` 버전 숫자를 올린다 (현재 oneuri-v7, 다음은 v8 ...). 안 올리면 폰에 옛 버전이 남는다.
 
 ## 주소와 계정
 - 앱 주소: https://yyebo5-glitch.github.io/todaylunch/
