@@ -667,7 +667,7 @@ function radarMarkup(vals, opt = {}) {
   });
 
   const avg = CATS.reduce((s, c) => s + valOf(c.key), 0) / 4;
-  const smile = f1(171 + avg * 1.6);
+  const mouth = 4 + avg * 1.2;   // 입 벌린 크기
 
   // 모서리 글자 + 점수
   const L = compact
@@ -685,10 +685,10 @@ function radarMarkup(vals, opt = {}) {
     <defs>
       <pattern id="${id}D" width="18" height="18" patternUnits="userSpaceOnUse"><circle cx="9" cy="9" r="1.3" fill="#d9d9d9"/></pattern>
       <linearGradient id="${id}L" gradientUnits="userSpaceOnUse" x1="60" y1="120" x2="300" y2="260">
-        <stop offset="0" stop-color="#ffb347"/><stop offset=".55" stop-color="#f6c15b"/><stop offset="1" stop-color="#9fcf62"/>
+        <stop offset="0" stop-color="#f6d860"/><stop offset=".55" stop-color="#ece07a"/><stop offset="1" stop-color="#bcd874"/>
       </linearGradient>
-      <linearGradient id="${id}B" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#ffbe55"/><stop offset=".6" stop-color="#f3c862"/><stop offset="1" stop-color="#a6d06a"/>
+      <linearGradient id="${id}B" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#fae47e"/><stop offset=".6" stop-color="#ece27c"/><stop offset="1" stop-color="#c6dc78"/>
       </linearGradient>
     </defs>
     ${compact ? '' : `<rect x="0" y="0" width="360" height="372" fill="url(#${id}D)"/>`}
@@ -696,16 +696,32 @@ function radarMarkup(vals, opt = {}) {
     ${any ? `<path d="${smoothPath([pts.taste, pts.clean, pts.revisit, pts.novelty])}" fill="#ff7a1a" fill-opacity=".22" stroke="#ff7a1a" stroke-width="3" stroke-linejoin="round"/>` : ''}
     ${limbs}${ends}
     <g transform="translate(180 185) scale(1.15) translate(-180 -185)">
-      <path d="M170 146 l-5 -11 l10 6z M190 146 l5 -11 l-10 6z" fill="#e39a4d"/>
-      <ellipse cx="180" cy="194" rx="24" ry="25" fill="url(#${id}B)"/>
-      <ellipse cx="180" cy="198" rx="16" ry="17" fill="#fff2c2"/>
-      <ellipse cx="157" cy="160" rx="9" ry="5" fill="#f9b54f" transform="rotate(-20 157 160)"/>
-      <ellipse cx="203" cy="160" rx="9" ry="5" fill="#c9cf5e" transform="rotate(20 203 160)"/>
-      <circle cx="180" cy="163" r="21" fill="url(#${id}B)"/>
-      <circle cx="172" cy="162" r="3.6" fill="#4a2e1c"/><circle cx="188" cy="162" r="3.6" fill="#4a2e1c"/>
-      <circle cx="173.2" cy="160.6" r="1.2" fill="#fff"/><circle cx="189.2" cy="160.6" r="1.2" fill="#fff"/>
-      <ellipse cx="166" cy="169" rx="3.5" ry="2" fill="#ff9e7a" opacity=".6"/><ellipse cx="194" cy="169" rx="3.5" ry="2" fill="#ff9e7a" opacity=".6"/>
-      <path d="M174 170 Q180 ${smile} 186 170" fill="none" stroke="#4a2e1c" stroke-width="1.8" stroke-linecap="round"/>
+      <!-- 귀 (아래로 처진 귀, 안쪽은 분홍) -->
+      <ellipse cx="151" cy="160" rx="13" ry="6.5" fill="url(#${id}B)" transform="rotate(28 151 160)"/>
+      <ellipse cx="152" cy="161" rx="8" ry="3.4" fill="#f4a98c" transform="rotate(28 152 161)"/>
+      <ellipse cx="209" cy="160" rx="13" ry="6.5" fill="url(#${id}B)" transform="rotate(-28 209 160)"/>
+      <ellipse cx="208" cy="161" rx="8" ry="3.4" fill="#f4a98c" transform="rotate(-28 208 161)"/>
+      <!-- 갈색 뿔 -->
+      <ellipse cx="166" cy="141" rx="4.2" ry="7" fill="#a8724f" transform="rotate(-18 166 141)"/>
+      <ellipse cx="194" cy="141" rx="4.2" ry="7" fill="#a8724f" transform="rotate(18 194 141)"/>
+      <!-- 몸통 -->
+      <ellipse cx="180" cy="199" rx="22" ry="21" fill="url(#${id}B)"/>
+      <ellipse cx="180" cy="202" rx="14" ry="13" fill="#fff6c8"/>
+      <!-- 큰 얼굴 -->
+      <ellipse cx="180" cy="160" rx="27" ry="23" fill="url(#${id}B)"/>
+      <ellipse cx="180" cy="171" rx="16" ry="9.5" fill="#fbf0a8"/>
+      <!-- 큰 갈색 눈 -->
+      <circle cx="169" cy="156" r="6" fill="#fff"/><circle cx="191" cy="156" r="6" fill="#fff"/>
+      <circle cx="169.4" cy="156.6" r="5" fill="#6b3d22"/><circle cx="190.6" cy="156.6" r="5" fill="#6b3d22"/>
+      <circle cx="169.6" cy="157" r="2.6" fill="#2e1a10"/><circle cx="190.4" cy="157" r="2.6" fill="#2e1a10"/>
+      <circle cx="167.8" cy="154.6" r="1.9" fill="#fff"/><circle cx="188.8" cy="154.6" r="1.9" fill="#fff"/>
+      <circle cx="171.2" cy="158.6" r=".8" fill="#fff"/><circle cx="192.2" cy="158.6" r=".8" fill="#fff"/>
+      <!-- 볼터치, 콧구멍 -->
+      <ellipse cx="160" cy="166" rx="4.5" ry="2.6" fill="#ff9e8a" opacity=".55"/><ellipse cx="200" cy="166" rx="4.5" ry="2.6" fill="#ff9e8a" opacity=".55"/>
+      <circle cx="177" cy="166" r=".9" fill="#8a6a3a"/><circle cx="183" cy="166" r=".9" fill="#8a6a3a"/>
+      <!-- 활짝 웃는 입 (점수가 높을수록 크게) -->
+      <path d="M172.5 170.5 Q180 ${f1(170.5 + mouth)} 187.5 170.5 Z" fill="#8a3b2a"/>
+      <ellipse cx="180" cy="${f1(170.5 + mouth * 0.62)}" rx="${f1(2.5 + mouth * 0.25)}" ry="${f1(mouth * 0.3)}" fill="#ff8f8f"/>
     </g>
     ${labels}`;
 }
