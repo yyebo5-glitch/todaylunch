@@ -802,8 +802,11 @@ function loadKakaoMap() {
   });
   return kakaoMapReady;
 }
-const kakaoSearch = (fn, ...args) => new Promise(resolve =>
-  fn(...args, (data, status) => resolve(status === kakao.maps.services.Status.OK ? data : [])));
+// 카카오 검색 함수는 (검색어, 결과받을함수, 옵션) 순서. 8초 안에 답이 없으면 빈 결과로 넘어감
+const kakaoSearch = (fn, query, opt) => new Promise(resolve => {
+  const timer = setTimeout(() => resolve([]), 8000);
+  fn(query, (data, status) => { clearTimeout(timer); resolve(status === kakao.maps.services.Status.OK ? data : []); }, opt);
+});
 
 async function searchNearbyPlaces(lat, lng) {
   const list = $('placeList');
