@@ -170,13 +170,13 @@
   .radar-reset { font-size: 13px; color: var(--sub); padding: 6px 8px; }
   #radar { display: block; width: 100%; max-width: 380px; margin: 0 auto; touch-action: none; user-select: none; -webkit-user-select: none; }
   .radar-hint { text-align: center; font-size: 13px; color: var(--sub); padding: 2px 10px 8px; }
-  .r-lab { font-size: 26px; font-weight: 800; fill: #ff7a1a; letter-spacing: -1px; }
-  .r-val { font-size: 15px; font-weight: 700; fill: #262626; }
-  .r-sq { fill: none; stroke: #262626; stroke-width: 2.6; stroke-dasharray: 3 4.5; }
-  .r-sq.outer { stroke-width: 3.2; stroke-dasharray: none; }
-  .r-poly { fill: rgba(255, 122, 26, .22); stroke: #ff7a1a; stroke-width: 3; stroke-linejoin: round; }
-  .r-dot { fill: #fff; stroke: #ff7a1a; stroke-width: 3; }
-  .r-limb { fill: none; stroke: url(#limbGrad); stroke-width: 11; stroke-linecap: round; }
+
+  /* 게시물: 왼쪽 점수, 오른쪽 아래 작은 평가판 */
+  .post-foot { display: flex; align-items: flex-start; gap: 6px; padding-right: 12px; }
+  .post-left { flex: 1; min-width: 0; }
+  .radar-card { flex: 0 0 auto; width: 44%; max-width: 190px; margin-top: 10px; padding: 8px 6px 4px;
+    background: #fff; border-radius: 18px; box-shadow: 0 2px 12px rgba(0,0,0,.08); border: 1px solid #f1f1f1; }
+  .mini-radar { display: block; width: 100%; height: auto; }
   .delete-link { display: block; margin: 22px auto 0; color: var(--red); font-size: 14px; font-weight: 500; padding: 10px 20px; }
 
   /* ---------- 촬영 화면 ---------- */
@@ -560,7 +560,6 @@ async function renderProfile() {
 /* ---------- 게시물 상세 ---------- */
 function postHTML(r) {
   const sub = r.placeAddress ? esc(r.placeAddress) : timeAgo(r.timestamp);
-  const chips = CATS.map(c => `<span class="chip">${c.label} <b>${r.ratings?.[c.key] ?? '-'}</b></span>`).join('');
   return `
   <article class="post">
     <div class="post-head">
@@ -571,14 +570,18 @@ function postHTML(r) {
       </button>
     </div>
     <img class="post-img" src="${r.image}" alt="">
-    <div class="post-actions">
-      <button class="icon-btn" onclick="openShare(${r.id})" aria-label="공유"><svg class="ic" viewBox="0 0 24 24"><path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg></button>
-      <button class="icon-btn" onclick="closePost();openRate(${r.id})" aria-label="평가 수정"><svg class="ic" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></button>
+    <div class="post-foot">
+      <div class="post-left">
+        <div class="post-actions">
+          <button class="icon-btn" onclick="openShare(${r.id})" aria-label="공유"><svg class="ic" viewBox="0 0 24 24"><path d="M21 3 10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg></button>
+          <button class="icon-btn" onclick="closePost();openRate(${r.id})" aria-label="평가 수정"><svg class="ic" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></button>
+        </div>
+        <div class="score-big"><span class="st">★</span>${r.totalScore} <small>/ 5</small></div>
+        ${r.memo ? `<div class="caption"><b>나</b>${esc(r.memo)}</div>` : ''}
+        <div class="post-time">${timeAgo(r.timestamp)}</div>
+      </div>
+      <div class="radar-card">${miniRadarSVG(r)}</div>
     </div>
-    <div class="score-big"><span class="st">★</span>${r.totalScore} <small>/ 5</small></div>
-    <div class="chips">${chips}</div>
-    ${r.memo ? `<div class="caption"><b>나</b>${esc(r.memo)}</div>` : ''}
-    <div class="post-time">${timeAgo(r.timestamp)}</div>
   </article>`;
 }
 
@@ -593,124 +596,140 @@ function closePost() { $('postSheet').classList.remove('show'); document.body.st
 
 /* ---------- 평가 화면 ---------- */
 /* ===== 방사형 평가판: 모서리 쪽으로 밀면 캐릭터 팔·다리가 늘어남 =====
-   왼쪽 위 = 맛(왼팔), 오른쪽 위 = 청결(오른팔), 왼쪽 아래 = 신박(왼다리), 오른쪽 아래 = 또옴(오른다리) */
+   왼쪽 위 = 맛(왼팔), 오른쪽 위 = 청결(오른팔), 왼쪽 아래 = 신박(왼다리), 오른쪽 아래 = 또옴(오른다리)
+   같은 그림을 평가 화면(손가락 조작), 게시물(작게), 공유 이미지(사진 위)에 함께 씁니다. */
 const R = {
-  c: 180,                          // 가운데 좌표
-  rest: 40,                        // 점수 없을 때 손발 위치
-  lv: [0, 52, 74, 96, 118, 140],   // 1~5점 네모의 반 크기
+  c: 180,                                  // 가운데 좌표
+  rest: 40,                                // 점수 없을 때 손발 위치
+  ring: [0, 56, 79, 102, 125, 148],        // 1~5점 링의 반 크기
+  round: 0.55,                             // 링 모서리 둥글기 (클수록 동그라미에 가까움)
   dir: { taste: [-1, -1], clean: [1, -1], novelty: [-1, 1], revisit: [1, 1] },
-  joint: { taste: [161.6, 180.4], clean: [198.4, 180.4], novelty: [169.7, 214.9], revisit: [190.3, 214.9] }  // 어깨·엉덩이 (캐릭터 1.15배 기준)
+  joint: { taste: [161.6, 180.4], clean: [198.4, 180.4], novelty: [169.7, 214.9], revisit: [190.3, 214.9] }
 };
+// 둥근 링 위에서 대각선 방향 꼭짓점 위치 (점수 점이 링 위에 정확히 놓이도록)
+R.lv = R.ring.map(h => h * (1 - R.round * (1 - Math.SQRT1_2)));
+const FONT = "'Noto Sans KR','Noto Sans CJK KR',sans-serif";
 let live = null;   // 지금 손가락으로 끌고 있는 항목 { cat, h, level }
 
-function buildRadar() {
-  const c = R.c;
-  const sq = R.lv.slice(1).map((h, i) =>
-    `<rect class="r-sq ${i === 4 ? 'outer' : ''}" x="${c - h}" y="${c - h}" width="${h * 2}" height="${h * 2}"/>`).join('');
-  $('radar').innerHTML = `
-    <defs>
-      <pattern id="dots" width="18" height="18" patternUnits="userSpaceOnUse"><circle cx="9" cy="9" r="1.3" fill="#d9d9d9"/></pattern>
-      <linearGradient id="limbGrad" gradientUnits="userSpaceOnUse" x1="60" y1="120" x2="300" y2="260">
-        <stop offset="0" stop-color="#ffb347"/><stop offset=".55" stop-color="#f6c15b"/><stop offset="1" stop-color="#9fcf62"/>
-      </linearGradient>
-      <linearGradient id="bodyGrad" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#ffbe55"/><stop offset=".6" stop-color="#f3c862"/><stop offset="1" stop-color="#a6d06a"/>
-      </linearGradient>
-    </defs>
-    <rect x="0" y="0" width="360" height="372" fill="url(#dots)"/>
-    ${sq}
-    <polygon class="r-poly" id="rPoly"/>
-    <g id="rLimbs">
-      <path class="r-limb" id="limb-novelty"/><path class="r-limb" id="limb-revisit"/>
-      <path class="r-limb" id="limb-taste"/><path class="r-limb" id="limb-clean"/>
-    </g>
-    <g id="rEnds"></g>
-    <g id="rChar" transform="translate(180 185) scale(1.15) translate(-180 -185)">
-      <path d="M170 146 l-5 -11 l10 6z M190 146 l5 -11 l-10 6z" fill="#e39a4d"/>
-      <ellipse cx="180" cy="194" rx="24" ry="25" fill="url(#bodyGrad)"/>
-      <ellipse cx="180" cy="198" rx="16" ry="17" fill="#fff2c2"/>
-      <ellipse cx="157" cy="160" rx="9" ry="5" fill="#f9b54f" transform="rotate(-20 157 160)"/>
-      <ellipse cx="203" cy="160" rx="9" ry="5" fill="#c9cf5e" transform="rotate(20 203 160)"/>
-      <circle cx="180" cy="163" r="21" fill="url(#bodyGrad)"/>
-      <circle cx="172" cy="162" r="3.6" fill="#4a2e1c"/><circle cx="188" cy="162" r="3.6" fill="#4a2e1c"/>
-      <circle cx="173.2" cy="160.6" r="1.2" fill="#fff"/><circle cx="189.2" cy="160.6" r="1.2" fill="#fff"/>
-      <ellipse cx="166" cy="169" rx="3.5" ry="2" fill="#ff9e7a" opacity=".6"/><ellipse cx="194" cy="169" rx="3.5" ry="2" fill="#ff9e7a" opacity=".6"/>
-      <path id="rMouth" d="M175 170 Q180 173 185 170" fill="none" stroke="#4a2e1c" stroke-width="1.8" stroke-linecap="round"/>
-    </g>
-    <g id="rLabels"></g>`;
-
-  const svg = $('radar');
-  svg.addEventListener('pointerdown', onRadarDown);
-  svg.addEventListener('pointermove', onRadarMove);
-  svg.addEventListener('pointerup', onRadarUp);
-  svg.addEventListener('pointercancel', onRadarUp);
-}
-
-function hOf(cat) {
-  if (live && live.cat === cat) return live.h;
-  const v = ratings[cat] || 0;
-  return v ? R.lv[v] : R.rest;
-}
-function cornerPt(cat, h) { const [sx, sy] = R.dir[cat]; return [R.c + sx * h, R.c + sy * h]; }
+const f1 = n => Math.round(n * 10) / 10;
+function cornerPt(cat, h) { const [sx, sy] = R.dir[cat]; return [f1(R.c + sx * h), f1(R.c + sy * h)]; }
 function levelOf(h) { return Math.max(1, Math.min(5, Math.round((h - R.lv[1]) / (R.lv[2] - R.lv[1])) + 1)); }
 
 function limbPath(from, to, bend) {
   const mx = (from[0] + to[0]) / 2, my = (from[1] + to[1]) / 2;
   const dx = to[0] - from[0], dy = to[1] - from[1], len = Math.hypot(dx, dy) || 1;
-  return `M${from} Q${mx - dy / len * bend},${my + dx / len * bend} ${to}`;
+  return `M${from} Q${f1(mx - dy / len * bend)},${f1(my + dx / len * bend)} ${to}`;
 }
 
-function drawRadar() {
+// 네 점을 지나는 부드러운 닫힌 곡선 (뾰족한 다각형 대신 둥근 모양)
+function smoothPath(pts) {
+  const n = pts.length, t = 0.2;
+  let d = `M${pts[0]}`;
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+    const c1 = [f1(p1[0] + (p2[0] - p0[0]) * t), f1(p1[1] + (p2[1] - p0[1]) * t)];
+    const c2 = [f1(p2[0] - (p3[0] - p1[0]) * t), f1(p2[1] - (p3[1] - p1[1]) * t)];
+    d += ` C${c1} ${c2} ${p2}`;
+  }
+  return d + 'Z';
+}
+
+/* 평가판 그림 만들기
+   vals: { taste, clean, novelty, revisit } (0 = 아직 안 함)
+   opt.id: 그림마다 다른 이름표(색 그라데이션이 서로 섞이지 않게)
+   opt.compact: 작은 크기용 (글자 크게, 바탕 점무늬 없음) */
+const RADAR_VIEW = { normal: '0 0 360 372', compact: '-16 -40 392 448' };
+function radarMarkup(vals, opt = {}) {
+  const id = opt.id || 'r', compact = !!opt.compact, lv = opt.live || null;
+  const valOf = k => (lv && lv.cat === k) ? lv.level : (vals?.[k] || 0);
+  const hOf = k => (lv && lv.cat === k) ? lv.h : (vals?.[k] ? R.lv[vals[k]] : R.rest);
   const pts = {};
   CATS.forEach(c => { pts[c.key] = cornerPt(c.key, hOf(c.key)); });
+  const any = !!lv || CATS.some(c => vals?.[c.key]);
 
-  // 채워지는 다각형 (맛 → 청결 → 또옴 → 신박)
-  $('rPoly').setAttribute('points', [pts.taste, pts.clean, pts.revisit, pts.novelty].map(p => p.join(',')).join(' '));
-  $('rPoly').style.display = (live || CATS.some(c => ratings[c.key])) ? '' : 'none';   // 첫 스와이프 전에는 숨김
+  const rings = R.ring.slice(1).map((h, i) => {
+    const outer = i === 4, r = f1(h * R.round);
+    return `<rect x="${R.c - h}" y="${R.c - h}" width="${h * 2}" height="${h * 2}" rx="${r}" ry="${r}" fill="none" stroke="#262626"
+      stroke-width="${outer ? 3.4 : 2.6}" ${outer ? '' : 'stroke-dasharray="0.1 7" stroke-linecap="round"'}/>`;
+  }).join('');
 
-  // 팔·다리: 길어질수록 살짝 휘게
-  let ends = '';
-  CATS.forEach(c => {
-    const k = c.key, j = R.joint[k], p = pts[k];
+  let limbs = '', ends = '';
+  ['novelty', 'revisit', 'taste', 'clean'].forEach(k => {
+    const j = R.joint[k], p = pts[k];
     const stretch = (hOf(k) - R.rest) / (R.lv[5] - R.rest);
     const bend = (k === 'taste' || k === 'revisit' ? 1 : -1) * (6 + stretch * 10);
-    $('limb-' + k).setAttribute('d', limbPath(j, p, bend));
+    limbs += `<path d="${limbPath(j, p, bend)}" fill="none" stroke="url(#${id}L)" stroke-width="11" stroke-linecap="round"/>`;
     const isLeg = k === 'novelty' || k === 'revisit';
     ends += isLeg
-      ? `<ellipse cx="${p[0]}" cy="${p[1]}" rx="9" ry="7" fill="url(#limbGrad)"/><ellipse cx="${p[0]}" cy="${p[1] + 1}" rx="5" ry="3.5" fill="#fff2c2"/>`
-      : `<circle cx="${p[0]}" cy="${p[1]}" r="8" fill="url(#limbGrad)"/><circle cx="${p[0] - 2}" cy="${p[1] - 2}" r="2.6" fill="#fff2c2" opacity=".9"/>`;
-    if (ratings[k] || (live && live.cat === k)) ends += `<circle class="r-dot" cx="${p[0]}" cy="${p[1]}" r="4"/>`;
+      ? `<ellipse cx="${p[0]}" cy="${p[1]}" rx="9" ry="7" fill="url(#${id}L)"/><ellipse cx="${p[0]}" cy="${p[1] + 1}" rx="5" ry="3.5" fill="#fff2c2"/>`
+      : `<circle cx="${p[0]}" cy="${p[1]}" r="8" fill="url(#${id}L)"/><circle cx="${p[0] - 2}" cy="${p[1] - 2}" r="2.6" fill="#fff2c2" opacity=".9"/>`;
+    if (valOf(k)) ends += `<circle cx="${p[0]}" cy="${p[1]}" r="4.5" fill="#fff" stroke="#ff7a1a" stroke-width="3"/>`;
   });
-  $('rEnds').innerHTML = ends;
 
-  // 점수가 높을수록 입이 더 크게 웃음
-  const vals = CATS.map(c => (live && live.cat === c.key) ? live.level : (ratings[c.key] || 0));
-  const avg = vals.reduce((a, b) => a + b, 0) / 4;
-  const smile = 170 + 1 + avg * 1.6;
-  $('rMouth').setAttribute('d', `M174 170 Q180 ${smile.toFixed(1)} 186 170`);
+  const avg = CATS.reduce((s, c) => s + valOf(c.key), 0) / 4;
+  const smile = f1(171 + avg * 1.6);
 
   // 모서리 글자 + 점수
-  const lab = [
-    ['taste', 34, 28, 'start'], ['clean', 326, 28, 'end'],
-    ['novelty', 34, 364, 'start'], ['revisit', 326, 364, 'end']
-  ];
-  $('rLabels').innerHTML = lab.map(([k, x, y, anchor]) => {
-    const c = CATS.find(cc => cc.key === k);
-    const v = (live && live.cat === k) ? live.level : ratings[k];
-    return `<text x="${x}" y="${y}" text-anchor="${anchor}"><tspan class="r-lab">${c.label}</tspan>${v ? `<tspan class="r-val" dx="6">${v}점</tspan>` : ''}</text>`;
+  const L = compact
+    ? { size: 42, vsize: 34, pos: { taste: [-14, -4, 'start'], clean: [374, -4, 'end'], novelty: [-14, 404, 'start'], revisit: [374, 404, 'end'] } }
+    : { size: 26, vsize: 15, pos: { taste: [26, 24, 'start'], clean: [334, 24, 'end'], novelty: [26, 364, 'start'], revisit: [334, 364, 'end'] } };
+  const labels = CATS.map(c => {
+    const [x, y, anchor] = L.pos[c.key], v = valOf(c.key);
+    return `<text x="${x}" y="${y}" text-anchor="${anchor}" font-family="${FONT}" letter-spacing="-1">` +
+      `<tspan font-size="${L.size}" font-weight="800" fill="#ff7a1a">${c.label}</tspan>` +
+      (v ? `<tspan font-size="${L.vsize}" font-weight="700" fill="#262626" dx="${compact ? 8 : 6}">${v}${compact ? '' : '점'}</tspan>` : '') +
+      `</text>`;
   }).join('');
+
+  return `
+    <defs>
+      <pattern id="${id}D" width="18" height="18" patternUnits="userSpaceOnUse"><circle cx="9" cy="9" r="1.3" fill="#d9d9d9"/></pattern>
+      <linearGradient id="${id}L" gradientUnits="userSpaceOnUse" x1="60" y1="120" x2="300" y2="260">
+        <stop offset="0" stop-color="#ffb347"/><stop offset=".55" stop-color="#f6c15b"/><stop offset="1" stop-color="#9fcf62"/>
+      </linearGradient>
+      <linearGradient id="${id}B" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#ffbe55"/><stop offset=".6" stop-color="#f3c862"/><stop offset="1" stop-color="#a6d06a"/>
+      </linearGradient>
+    </defs>
+    ${compact ? '' : `<rect x="0" y="0" width="360" height="372" fill="url(#${id}D)"/>`}
+    ${rings}
+    ${any ? `<path d="${smoothPath([pts.taste, pts.clean, pts.revisit, pts.novelty])}" fill="#ff7a1a" fill-opacity=".22" stroke="#ff7a1a" stroke-width="3" stroke-linejoin="round"/>` : ''}
+    ${limbs}${ends}
+    <g transform="translate(180 185) scale(1.15) translate(-180 -185)">
+      <path d="M170 146 l-5 -11 l10 6z M190 146 l5 -11 l-10 6z" fill="#e39a4d"/>
+      <ellipse cx="180" cy="194" rx="24" ry="25" fill="url(#${id}B)"/>
+      <ellipse cx="180" cy="198" rx="16" ry="17" fill="#fff2c2"/>
+      <ellipse cx="157" cy="160" rx="9" ry="5" fill="#f9b54f" transform="rotate(-20 157 160)"/>
+      <ellipse cx="203" cy="160" rx="9" ry="5" fill="#c9cf5e" transform="rotate(20 203 160)"/>
+      <circle cx="180" cy="163" r="21" fill="url(#${id}B)"/>
+      <circle cx="172" cy="162" r="3.6" fill="#4a2e1c"/><circle cx="188" cy="162" r="3.6" fill="#4a2e1c"/>
+      <circle cx="173.2" cy="160.6" r="1.2" fill="#fff"/><circle cx="189.2" cy="160.6" r="1.2" fill="#fff"/>
+      <ellipse cx="166" cy="169" rx="3.5" ry="2" fill="#ff9e7a" opacity=".6"/><ellipse cx="194" cy="169" rx="3.5" ry="2" fill="#ff9e7a" opacity=".6"/>
+      <path d="M174 170 Q180 ${smile} 186 170" fill="none" stroke="#4a2e1c" stroke-width="1.8" stroke-linecap="round"/>
+    </g>
+    ${labels}`;
 }
+
+// 게시물에 넣을 작은 평가판
+function miniRadarSVG(r) {
+  return `<svg class="mini-radar" viewBox="${RADAR_VIEW.compact}" role="img" aria-label="${CATS.map(c => c.label + ' ' + (r.ratings?.[c.key] || 0) + '점').join(', ')}">${radarMarkup(r.ratings, { id: 'p' + r.id, compact: true })}</svg>`;
+}
+
+/* ---------- 평가 화면의 손가락 조작 ---------- */
+function drawRadar() { $('radar').innerHTML = radarMarkup(ratings, { id: 'e', live }); }
 
 function svgPoint(e) {
   const svg = $('radar'), pt = new DOMPoint(e.clientX, e.clientY);
   return pt.matrixTransform(svg.getScreenCTM().inverse());
 }
 function catAt(dx, dy) { return dy < 0 ? (dx < 0 ? 'taste' : 'clean') : (dx < 0 ? 'novelty' : 'revisit'); }
+function curH(cat) { return ratings[cat] ? R.lv[ratings[cat]] : R.rest; }
 
 function onRadarDown(e) {
   const p = svgPoint(e), dx = p.x - R.c, dy = p.y - R.c;
   if (Math.hypot(dx, dy) < 10) return;
-  live = { cat: catAt(dx, dy), h: hOf(catAt(dx, dy)), level: 0 };
+  const cat = catAt(dx, dy);
+  live = { cat, h: curH(cat), level: ratings[cat] || 0 };
   $('radar').setPointerCapture(e.pointerId);
   onRadarMove(e);
 }
@@ -737,7 +756,15 @@ function resetRadar() {
   drawRadar();
   $('radarHint').textContent = '캐릭터의 팔·다리를 모서리 쪽으로 쭉 밀어 점수를 매기세요';
 }
-buildRadar();
+(function setupRadar() {
+  const svg = $('radar');
+  svg.setAttribute('viewBox', RADAR_VIEW.normal);
+  svg.addEventListener('pointerdown', onRadarDown);
+  svg.addEventListener('pointermove', onRadarMove);
+  svg.addEventListener('pointerup', onRadarUp);
+  svg.addEventListener('pointercancel', onRadarUp);
+  drawRadar();
+})();
 
 async function openPendingRating() {
   const pending = (await getAll()).filter(r => r.status === 'pending').sort((a, b) => b.timestamp - a.timestamp);
@@ -913,8 +940,35 @@ function shareText(r) {
   return `🍽 ${r.restaurantName}\n⭐ ${r.totalScore} / 5  (${detail})${r.memo ? `\n📝 ${r.memo}` : ''}\n#오느리점심 #점심기록`;
 }
 
+const loadImg = src => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+const SHARE_SIZE = 1080;   // 공유 이미지: 정사각형 1080px (인스타·카카오에 잘 맞는 크기)
+
+// 공유용 이미지 = 사진(정사각형으로 가운데 자르기) + 오른쪽 아래 평가판 카드
+async function composeShareImage(r) {
+  const S = SHARE_SIZE, photo = await loadImg(r.image);
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const x = c.getContext('2d');
+  const side = Math.min(photo.width, photo.height);
+  x.drawImage(photo, (photo.width - side) / 2, (photo.height - side) / 2, side, side, 0, 0, S, S);
+
+  const [vx, vy, vw, vh] = RADAR_VIEW.compact.split(' ').map(Number);
+  const cw = Math.round(S * 0.36), ch = Math.round(cw * (vh + 24) / (vw + 24)), m = Math.round(S * 0.03);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${cw}" height="${ch}" viewBox="${vx - 12} ${vy - 12} ${vw + 24} ${vh + 24}">
+    <rect x="${vx - 12}" y="${vy - 12}" width="${vw + 24}" height="${vh + 24}" rx="44" fill="#ffffff" fill-opacity=".94"/>
+    ${radarMarkup(r.ratings, { id: 's', compact: true })}</svg>`;
+  const card = await loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg));
+  x.save();
+  x.shadowColor = 'rgba(0,0,0,.28)'; x.shadowBlur = 24; x.shadowOffsetY = 4;
+  x.drawImage(card, S - cw - m, S - ch - m, cw, ch);
+  x.restore();
+  return c.toDataURL('image/jpeg', 0.88);
+}
+
 async function photoFile(r) {
-  const blob = await (await fetch(r.image)).blob();
+  let data = r.image;
+  try { data = await composeShareImage(r); } catch (e) { console.warn('평가판 합성 실패, 원본 사진으로 공유', e); }
+  const blob = await (await fetch(data)).blob();
   return new File([blob], 'oneuri-lunch.jpg', { type: 'image/jpeg' });
 }
 
@@ -926,11 +980,14 @@ function initKakao() {
 
 // 사진을 카카오 서버에 올리고 주소를 받아둠 (90일 안에는 다시 올리지 않음)
 async function kakaoImageUrl(r) {
-  if (r.kakaoImg && Date.now() - r.kakaoImgAt < KAKAO_IMG_DAYS * 86400000) return r.kakaoImg;
+  // 평가를 고쳤으면 평가판이 바뀌었으니 새로 올림
+  const key = 'v2:' + CATS.map(c => r.ratings[c.key]).join('');
+  if (r.kakaoImg && r.kakaoImgKey === key && Date.now() - r.kakaoImgAt < KAKAO_IMG_DAYS * 86400000) return r.kakaoImg;
   if (!initKakao()) throw new Error('카카오 SDK 없음');
   const res = await Kakao.Share.uploadImage({ file: [await photoFile(r)] });
   r.kakaoImg = res.infos.original.url;
   r.kakaoImgAt = Date.now();
+  r.kakaoImgKey = key;
   await putOne(r);
   return r.kakaoImg;
 }
@@ -960,6 +1017,7 @@ async function shareKakao(id) {
         title: `${r.restaurantName}  ★ ${r.totalScore}`,
         description: r.memo ? `${detail}\n${r.memo}` : detail,
         imageUrl: r.kakaoImg || APP_URL + 'icon-512.png',
+        imageWidth: 800, imageHeight: 800,
         link: { mobileWebUrl: link, webUrl: link }
       },
       buttons: [{ title: '평가 보기', link: { mobileWebUrl: link, webUrl: link } }]
